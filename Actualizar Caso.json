@@ -1,0 +1,793 @@
+{
+  "name": "Actualizar Caso",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "1gDahtkboHSsBCaw1tLkJxNi57vtuKXhf9pMTUTjGbmE",
+          "mode": "list",
+          "cachedResultName": "HC-Test",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gDahtkboHSsBCaw1tLkJxNi57vtuKXhf9pMTUTjGbmE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Hoja 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gDahtkboHSsBCaw1tLkJxNi57vtuKXhf9pMTUTjGbmE/edit#gid=0"
+        },
+        "event": "rowUpdate",
+        "includeInOutput": "both",
+        "options": {
+          "columnsToWatch": []
+        }
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        -944,
+        272
+      ],
+      "id": "c69aedb3-a6ea-4934-a95e-a06630d299e9",
+      "name": "Google Sheets Trigger1",
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "yhZ087HfRjZ2ZPh8",
+          "name": "Google Sheets Trigger account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Google Sheets Trigger1').item.json.differences.Diagnóstico }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    },
+                    "id": "2c68cd72-1383-4ef2-971c-8c42a59dbf36"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Diagnóstico"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "87b9f967-6526-405f-8fdc-79c765ef4abe",
+                    "leftValue": "={{ $('Google Sheets Trigger1').item.json.differences.OBSERVACIONES}}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Observaciones"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "5120d738-564c-4c33-a843-d33bb5d91891",
+                    "leftValue": "={{ $('Google Sheets Trigger1').item.json.differences[\"Base/Of\"] }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Base/Of"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "5e88b6e8-374c-4291-8659-83976704a4d4",
+                    "leftValue": "={{ Object.keys($('Google Sheets Trigger1').item.json.differences).find(k => ['verde', 'amarillo', 'rojo'].includes(String($json.current[k]).toLowerCase())) }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Semáforo"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "472cb013-893c-4df1-81c3-71a3cc225831",
+                    "leftValue": "={{ $('Google Sheets Trigger1').item.json.differences[\"Próximo Control\"] }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Próximo Control"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "b28ebc63-561a-4f3e-9ca3-fb87936ded93",
+                    "leftValue": "={{ $('Google Sheets Trigger1').item.json.differences.CIA || $('Google Sheets Trigger1').item.json.differences.DISTRITO }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "CIA/Distrito"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "e2355602-55c7-4462-b012-fa1e5aec2da3",
+                    "leftValue": "={{ $('Google Sheets Trigger1').item.json.differences[\n\"Fecha de Inicio\"] }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Fecha Inicio"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "afcc55c0-6017-4bae-b174-36ee9445a358",
+                    "leftValue": "={{ $('Google Sheets Trigger1').item.json.differences[\"Tipo de Evento\"] }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Tipo de Evento"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "658391bf-a6f4-4fce-89d7-2e75d7cfb09e",
+                    "leftValue": "={{ $('Google Sheets Trigger1').item.json.differences.Equipo }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Equipo"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "a800aa4b-bee5-471e-a8ba-4c80d672a7d3",
+                    "leftValue": "={{ $('Google Sheets Trigger1').item.json.differences.Operadora }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Operadora"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "773e1944-7844-4a4c-9563-e92f608abc54",
+                    "leftValue": "={{ $('Google Sheets Trigger1').item.json.differences.Legajo || $('Google Sheets Trigger1').item.json.differences[\"Legajo con ceros\"] || $('Google Sheets Trigger1').item.json.differences[\"Apellido y Nombre\"] }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Legajos/NombreApellido"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "ac2b6a89-ee2c-42f9-81a9-52eafd08d107",
+                    "leftValue": "={{ $('Google Sheets Trigger1').item.json.differences[\"Próximo Control\"] }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Proximo Control"
+            }
+          ]
+        },
+        "options": {
+          "allMatchingOutputs": true
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -368,
+        112
+      ],
+      "id": "6327ce7e-b932-43cc-8d64-40fcf85bff9a",
+      "name": "¿Qué cambio?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Paso 1: Asegurar que existe el diagnóstico (INSERT o no hace nada si existe)\nINSERT INTO diagnostico (nombre)\nVALUES ('{{ $json.diagnostico.nombre }}')\nON CONFLICT (nombre) DO NOTHING;\n\n-- Paso 2: Actualizar el caso clínico con el diagnóstico\nUPDATE caso_clinico \nSET \n  diagnostico_id = (\n    SELECT id FROM diagnostico \n    WHERE nombre = '{{ $json.diagnostico.nombre }}'\n    LIMIT 1\n  ),\n  updated_at = CURRENT_TIMESTAMP\nWHERE paciente_id = (\n  SELECT id FROM paciente \n  WHERE legajo = {{ $json.paciente.legajo }}\n  LIMIT 1\n)\nAND fecha_inicio = '{{ $json.caso_clinico.fecha_inicio }}'::DATE\nRETURNING id, diagnostico_id, updated_at;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        64,
+        0
+      ],
+      "id": "3af61de7-971e-48c6-80dd-388b7452a79a",
+      "name": "Update Diagnostico Paciente",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Eres un asistente médico que procesa observaciones clínicas. \n\nExtraes solo el texto NUEVO que se agregó entre dos observaciones.\n\nIMPORTANTE:\n- El campo \"fecha\" debe estar en formato YYYY-MM-DD\n- Si la fecha no tiene año, usa 2025\n- Mantén la fecha DENTRO del texto de observacion_nueva\n- Responde SOLO con JSON válido, sin markdown ni explicaciones",
+              "role": "model"
+            },
+            {
+              "content": "=Observación Previa: \"{{ $('Google Sheets Trigger1').item.json.previous.OBSERVACIONES }}\"\nObservación Actual: \"{{ $('Google Sheets Trigger1').item.json.current.OBSERVACIONES }}\"\n\nExtrae:\n1. El texto NUEVO que se agregó (mantén las fechas en el texto)\n2. La fecha más reciente mencionada en formato YYYY-MM-DD\n\nResponde SOLO con este JSON:\n{\n  \"fecha\": \"YYYY-MM-DD\" o null,\n  \"observacion_nueva\": \"texto nuevo completo con fechas incluidas\" o null\n}\n\nReglas:\n- Solo texto nuevo (no repetir lo previo)\n- Si hay múltiples fechas, extraer la más reciente para campo \"fecha\"\n- NO remover las fechas del texto\n- Si no hay cambios, retornar null en ambos campos\n- Convertir fechas a formato YYYY-MM-DD\n- Si fecha sin año, usar 2025\n\nEjemplo:\nPrevia: \"Reposo\"\nActual: \"Reposo. 24/3 buena evolución\"\nRespuesta: {\"fecha\": \"2025-03-24\", \"observacion_nueva\": \"24/3 buena evolución\"}"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        64,
+        176
+      ],
+      "id": "9f5eb8a7-3229-4c8a-9841-dc5bf3b2e974",
+      "name": "Obtener Nueva Observación"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Insertar nueva observación asociada al caso clínico\nINSERT INTO observaciones (\n  caso_clinico_id,\n  observacion_original,\n  fecha_observacion\n)\nSELECT \n  cc.id,\n  '{{ $json.observacion_nueva }}',\n  '{{ $json.fecha }}'::DATE\nFROM caso_clinico cc\nJOIN paciente p ON cc.paciente_id = p.id\nWHERE p.legajo = {{ $input.first().json.paciente.legajo }}\nAND cc.fecha_inicio = '{{ $input.first().json.caso_clinico.fecha_inicio }}'\nLIMIT 1\nRETURNING \n  id as observacion_id,\n  caso_clinico_id,\n  observacion_original,\n  fecha_observacion,\n  created_at;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        688,
+        176
+      ],
+      "id": "594a25d0-63ba-4486-9a4f-ef91012851d4",
+      "name": "Execute a SQL query"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtener el texto del nodo de IA\nconst aiResponse = $input.first().json.content.parts[0].text;\n\n// Parsear el JSON (limpiar posibles caracteres extras)\nconst parsedData = JSON.parse(aiResponse.trim());\n\n// Si la fecha es null, usar la fecha actual\nif (parsedData.fecha === null || parsedData.fecha === '' || !parsedData.fecha) {\n    const hoy = new Date();\n    parsedData.fecha = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;\n}\n\n// Retornar el objeto procesado\nreturn [{\n    json: {\n        fecha: parsedData.fecha,\n        observacion_nueva: parsedData.observacion_nueva\n    }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        432,
+        176
+      ],
+      "id": "c1441a68-081d-4966-b885-f5873eea4714",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "D6N6FPQQV2Z9DOmr",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        -576,
+        272
+      ],
+      "id": "58a70cf7-c095-4cfd-a1ef-f040505f00f2",
+      "name": "TransformCasoFromExcel"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtener todos los items de entrada\nconst items = $input.all();\n\n// Transformar cada item: quedarnos con los datos del campo \"current\"\nconst result = items.map(item => {\n  const current = item.json.current;\n\n  // Si querés podés agregar un ID incremental, por ejemplo:\n  current.id = item.json.previous?.row_number || null;\n\n  return { json: current };\n});\n\nreturn result;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -768,
+        272
+      ],
+      "id": "d8626e25-51fb-46cf-9258-f70b6feb40c1",
+      "name": "Separar Caso Actual"
+    }
+  ],
+  "pinData": {
+    "Google Sheets Trigger1": [
+      {
+        "json": {
+          "previous": {
+            "45931": "verde",
+            "row_number": 72,
+            "id": 71,
+            "CIA": "SAI",
+            "DISTRITO": "DO",
+            "Base/Of": "Malargue",
+            "Fecha de Inicio": 45929,
+            "Tipo de Evento": "ENFERMO",
+            "Equipo": "",
+            "Operadora": "",
+            "Legajo": 70,
+            "Legajo con ceros": 70,
+            "Apellido y Nombre": "A45",
+            "Próximo Control": 45931,
+            "DIAS HASTA CONTROL": -5,
+            "Días de BAJA": 2,
+            "Diagnóstico": "Sinusitis",
+            "OBSERVACIONES": "Reposo medicación controles.",
+            "": ""
+          },
+          "current": {
+            "45931": "verde",
+            "row_number": 72,
+            "id": 71,
+            "CIA": "SAI",
+            "DISTRITO": "DO",
+            "Base/Of": "Mendoza",
+            "Fecha de Inicio": 45929,
+            "Tipo de Evento": "ENFERMO",
+            "Equipo": "",
+            "Operadora": "",
+            "Legajo": 70,
+            "Legajo con ceros": 70,
+            "Apellido y Nombre": "A45",
+            "Próximo Control": 45931,
+            "DIAS HASTA CONTROL": -5,
+            "Días de BAJA": 2,
+            "Diagnóstico": "Sinusitis",
+            "OBSERVACIONES": "Reposo medicación controles.",
+            "": ""
+          },
+          "differences": {
+            "row_number": 72,
+            "Base/Of": {
+              "previous": "Malargue",
+              "current": "Mendoza"
+            }
+          }
+        }
+      },
+      {
+        "json": {
+          "previous": {
+            "45931": "amarillo",
+            "row_number": 73,
+            "id": 72,
+            "CIA": "SAI",
+            "DISTRITO": "DO",
+            "Base/Of": "Mendoza",
+            "Fecha de Inicio": 45929,
+            "Tipo de Evento": "ENFERMO",
+            "Equipo": "",
+            "Operadora": "",
+            "Legajo": 71,
+            "Legajo con ceros": 71,
+            "Apellido y Nombre": "A46",
+            "Próximo Control": 45933,
+            "DIAS HASTA CONTROL": -3,
+            "Días de BAJA": 2,
+            "Diagnóstico": "Bronquitis aguda",
+            "OBSERVACIONES": "Reposo medicación controles.",
+            "": ""
+          },
+          "current": {
+            "45931": "amarillo",
+            "row_number": 73,
+            "id": 72,
+            "CIA": "SAI",
+            "DISTRITO": "DO",
+            "Base/Of": "Mendoza",
+            "Fecha de Inicio": 45929,
+            "Tipo de Evento": "ENFERMO",
+            "Equipo": "",
+            "Operadora": "",
+            "Legajo": 71,
+            "Legajo con ceros": 71,
+            "Apellido y Nombre": "A46",
+            "Próximo Control": 45935,
+            "DIAS HASTA CONTROL": -3,
+            "Días de BAJA": 2,
+            "Diagnóstico": "Bronquitis aguda",
+            "OBSERVACIONES": "Reposo medicación controles.",
+            "": ""
+          },
+          "differences": {
+            "row_number": 73,
+            "Próximo Control": {
+              "previous": 45933,
+              "current": 45935
+            }
+          }
+        }
+      },
+      {
+        "json": {
+          "previous": {
+            "45931": "amarillo",
+            "row_number": 74,
+            "id": 73,
+            "CIA": "SAI",
+            "DISTRITO": "DO",
+            "Base/Of": "Catriel",
+            "Fecha de Inicio": 45929,
+            "Tipo de Evento": "ACCIDENTADO",
+            "Equipo": "SAI 371",
+            "Operadora": "P. Sudamericanos",
+            "Legajo": 72,
+            "Legajo con ceros": 72,
+            "Apellido y Nombre": "A47",
+            "Próximo Control": 45933,
+            "DIAS HASTA CONTROL": -3,
+            "Días de BAJA": 2,
+            "Diagnóstico": "Gonalgia izq",
+            "OBSERVACIONES": "Reposo medicación, RMN",
+            "": "falta informe rmn"
+          },
+          "current": {
+            "45931": "amarillo",
+            "row_number": 74,
+            "id": 73,
+            "CIA": "SAI",
+            "DISTRITO": "DO",
+            "Base/Of": "Catriel",
+            "Fecha de Inicio": 45929,
+            "Tipo de Evento": "ACCIDENTADO",
+            "Equipo": "SAI 371",
+            "Operadora": "P. Sudamericanos",
+            "Legajo": 72,
+            "Legajo con ceros": 72,
+            "Apellido y Nombre": "A47",
+            "Próximo Control": 45933,
+            "DIAS HASTA CONTROL": -3,
+            "Días de BAJA": 2,
+            "Diagnóstico": "Gonalgia izq Cambio",
+            "OBSERVACIONES": "Reposo medicación, RMN",
+            "": "falta informe rmn"
+          },
+          "differences": {
+            "row_number": 74,
+            "Diagnóstico": {
+              "previous": "Gonalgia izq",
+              "current": "Gonalgia izq Cambio"
+            }
+          }
+        }
+      },
+      {
+        "json": {
+          "previous": {
+            "45931": "verde",
+            "row_number": 75,
+            "id": 74,
+            "CIA": "SESA",
+            "DISTRITO": "DO",
+            "Base/Of": "Neuquen",
+            "Fecha de Inicio": 45929,
+            "Tipo de Evento": "ACCIDENTADO",
+            "Equipo": "in itinere",
+            "Operadora": "",
+            "Legajo": 73,
+            "Legajo con ceros": 73,
+            "Apellido y Nombre": "A48",
+            "Próximo Control": 45931,
+            "DIAS HASTA CONTROL": -5,
+            "Días de BAJA": 2,
+            "Diagnóstico": "Traumatismo muñeca y mano izq",
+            "OBSERVACIONES": "rx sin lesiones. Medicación. RMN. Inmovilización",
+            "": ""
+          },
+          "current": {
+            "45931": "verde",
+            "row_number": 75,
+            "id": 74,
+            "CIA": "SESA",
+            "DISTRITO": "DO",
+            "Base/Of": "Neuquen",
+            "Fecha de Inicio": 45929,
+            "Tipo de Evento": "ACCIDENTADO",
+            "Equipo": "in itinere",
+            "Operadora": "",
+            "Legajo": 73,
+            "Legajo con ceros": 73,
+            "Apellido y Nombre": "A48",
+            "Próximo Control": 45931,
+            "DIAS HASTA CONTROL": -5,
+            "Días de BAJA": 2,
+            "Diagnóstico": "Traumatismo muñeca y mano izq",
+            "OBSERVACIONES": "rx sin lesiones. Medicación. RMN. Inmovilización cambio nuevo",
+            "": ""
+          },
+          "differences": {
+            "row_number": 75,
+            "OBSERVACIONES": {
+              "previous": "rx sin lesiones. Medicación. RMN. Inmovilización",
+              "current": "rx sin lesiones. Medicación. RMN. Inmovilización cambio nuevo"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Google Sheets Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Separar Caso Actual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Qué cambio?": {
+      "main": [
+        [
+          {
+            "node": "Update Diagnostico Paciente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Obtener Nueva Observación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Nueva Observación": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Separar Caso Actual": {
+      "main": [
+        [
+          {
+            "node": "TransformCasoFromExcel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TransformCasoFromExcel": {
+      "main": [
+        [
+          {
+            "node": "¿Qué cambio?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "4c91818e-e8dd-43f1-8b37-1bd741c16922",
+  "meta": {
+    "instanceId": "5401c9f8e71c27ad222e069d21f03b4152784c83c549bb52ce6071eb671ff35b"
+  },
+  "id": "pxj7pPitl5Vl0kzW",
+  "tags": [
+    {
+      "createdAt": "2025-11-02T19:28:27.755Z",
+      "updatedAt": "2025-11-02T19:28:27.755Z",
+      "id": "dfJBmQLA6ia8WlGh",
+      "name": "Ingegrales"
+    }
+  ]
+}

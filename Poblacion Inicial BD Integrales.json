@@ -1,0 +1,370 @@
+{
+  "name": "Poblacion Inicial BD Integrales",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -912,
+        224
+      ],
+      "id": "4d76598a-ceb2-4e3c-bc88-9f5e19027680",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n    cc.id as caso_id,\n    p.legajo,\n    p.nombre_apellido as paciente,\n    c.nombre as cia,\n    d.nombre as distrito,\n    bo.nombre as base_oficina,\n    diag.nombre as diagnostico,\n    cc.tipo_evento,\n    cc.fecha_inicio,\n    f.nombre as fase_caso,\n    s.color as semaforo_caso,\n    \n    -- CONTROL REALIZADO (el más reciente con estado 'realizado')\n    ctrl_realizado.fecha_control as fecha_ultimo_control,\n    ctrl_realizado.fecha_ejecucion_control as fecha_ejecucion,\n    SUBSTRING(ctrl_realizado.observacion, 1, 100) as observacion_preview,\n    ctrl_realizado.created_at as fecha_carga_control_realizado,\n    \n    -- PRÓXIMO CONTROL (pendiente o vencido)\n    ctrl_proximo.fecha_control as fecha_proximo_control,\n    ctrl_proximo.dias_hasta_control as dias_hasta_proximo,\n    ctrl_proximo.estado_control as estado_proximo_control,\n    ctrl_proximo.created_at as fecha_carga_proximo_control,\n    \n    -- Metadata\n    cc.created_at as fecha_carga_caso,\n    \n    -- Indicador de urgencia\n    CASE \n        WHEN ctrl_proximo.estado_control = 'vencido' THEN '🔴 VENCIDO'\n        WHEN ctrl_proximo.dias_hasta_control <= 7 THEN '🟡 PRÓXIMO (≤7 días)'\n        WHEN ctrl_proximo.dias_hasta_control <= 30 THEN '🟢 PRÓXIMO (≤30 días)'\n        ELSE '⚪ LEJANO'\n    END as urgencia\n    \nFROM caso_clinico cc\nJOIN paciente p ON cc.paciente_id = p.id\nLEFT JOIN base_of bo ON p.base_of_id = bo.id\nLEFT JOIN distrito d ON bo.distrito_id = d.id\nLEFT JOIN cia c ON d.cia_id = c.id\nLEFT JOIN diagnostico diag ON cc.diagnostico_id = diag.id\nLEFT JOIN fase f ON cc.fase_id = f.id\nLEFT JOIN semaforo s ON cc.semaforo_id = s.id\n\n-- Control más reciente REALIZADO\nLEFT JOIN LATERAL (\n    SELECT *\n    FROM control_caso\n    WHERE caso_clinico_id = cc.id\n      AND estado_control = 'realizado'\n    ORDER BY fecha_control DESC, created_at DESC\n    LIMIT 1\n) ctrl_realizado ON true\n\n-- Próximo control (PENDIENTE o VENCIDO)\nLEFT JOIN LATERAL (\n    SELECT *\n    FROM control_caso\n    WHERE caso_clinico_id = cc.id\n      AND estado_control IN ('pendiente', 'vencido')\n    ORDER BY fecha_control ASC, created_at DESC\n    LIMIT 1\n) ctrl_proximo ON true\n\nORDER BY \n    CASE \n        WHEN ctrl_proximo.estado_control = 'vencido' THEN 1\n        WHEN ctrl_proximo.dias_hasta_control <= 7 THEN 2\n        WHEN ctrl_proximo.dias_hasta_control <= 30 THEN 3\n        ELSE 4\n    END,\n    ctrl_proximo.dias_hasta_control ASC,\n    cc.created_at DESC\nLIMIT 20;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1232,
+        272
+      ],
+      "id": "c89bd926-82c5-41b2-a2fa-ed98177fb80a",
+      "name": "QUERY SQL"
+    },
+    {
+      "parameters": {
+        "content": "## Descarga Planilla HC-Test",
+        "height": 336,
+        "width": 432
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -976,
+        96
+      ],
+      "id": "1ebf5815-71bf-47fc-9035-281367ec0f55",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "1gDahtkboHSsBCaw1tLkJxNi57vtuKXhf9pMTUTjGbmE",
+          "mode": "list",
+          "cachedResultName": "HC-Test",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gDahtkboHSsBCaw1tLkJxNi57vtuKXhf9pMTUTjGbmE/edit?usp=drivesdk"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -752,
+        224
+      ],
+      "id": "7b4e9854-9b1d-4fa2-93d0-4a4365885292",
+      "name": "Descargar Planilla Excel"
+    },
+    {
+      "parameters": {
+        "operation": "xlsx",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -432,
+        224
+      ],
+      "id": "ee582389-9ace-4ac2-a5f1-978c2d58533f",
+      "name": "Convertir XLSX a Json"
+    },
+    {
+      "parameters": {
+        "content": "## Transfromacion de datos\n",
+        "height": 336,
+        "width": 496,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -512,
+        96
+      ],
+      "id": "ba20960a-b242-42cf-a722-f327878fd4de",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Configuración Inicial\n",
+        "height": 336,
+        "width": 768,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "84918012-db16-4353-a380-3609837d8320",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Insertar colores de semáforo\nINSERT INTO semaforo (color) VALUES \n    ('verde'),\n    ('amarillo'),\n    ('rojo'),\n    ('sin_clasificar');\n\n-- Insertar fases\nINSERT INTO fase (nombre) VALUES \n    ('fase 1'),\n    ('fase 2'),\n    ('fase 3');",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        528,
+        112
+      ],
+      "id": "6e98fbec-ce60-4216-b9a2-5a4a087b3e29",
+      "name": "Insert Semaforo - Fase",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Tabla: CIA (Compañía Aseguradora)\nCREATE TABLE cia (\n    id SERIAL PRIMARY KEY,\n    nombre VARCHAR(50) UNIQUE NOT NULL,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n\n-- Tabla: Distrito\nCREATE TABLE distrito (\n    id SERIAL PRIMARY KEY,\n    nombre VARCHAR(100) NOT NULL,\n    cia_id INTEGER REFERENCES cia(id) ON DELETE CASCADE,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    UNIQUE(nombre, cia_id)\n);\n\n-- Tabla: BaseOf (Base/Oficina - ubicación física de la sede)\nCREATE TABLE base_of (\n    id SERIAL PRIMARY KEY,\n    nombre VARCHAR(100) UNIQUE NOT NULL,\n    distrito_id INTEGER REFERENCES distrito(id) ON DELETE SET NULL,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n\n-- Tabla: Paciente\nCREATE TABLE paciente (\n    id SERIAL PRIMARY KEY,\n    nombre_apellido VARCHAR(255) NOT NULL,\n    legajo INTEGER UNIQUE NOT NULL,\n    legajo_con_ceros INTEGER,\n    base_of_id INTEGER REFERENCES base_of(id) ON DELETE SET NULL,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n\n-- Tabla: Diagnóstico\nCREATE TABLE diagnostico (\n    id SERIAL PRIMARY KEY,\n    nombre TEXT UNIQUE NOT NULL,\n    detalle TEXT,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n\n-- Tabla: Semáforo\nCREATE TABLE semaforo (\n    id SERIAL PRIMARY KEY,\n    color VARCHAR(20) NOT NULL UNIQUE,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n\n-- Tabla: Fase\nCREATE TABLE fase (\n    id SERIAL PRIMARY KEY,\n    nombre VARCHAR(50) UNIQUE NOT NULL,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n\n-- Tabla: CasoClinico (Principal)\nCREATE TABLE caso_clinico (\n    id SERIAL PRIMARY KEY,\n    \n    -- Fechas y control\n    fecha_inicio DATE NOT NULL,\n    tipo_evento VARCHAR(50) NOT NULL, -- 'ENFERMO', 'ACCIDENTADO'\n    fecha_fin DATE,\n    \n    -- Relaciones principales (cardinalidad 1)\n    paciente_id INTEGER NOT NULL REFERENCES paciente(id) ON DELETE CASCADE,\n    diagnostico_id INTEGER REFERENCES diagnostico(id) ON DELETE SET NULL,\n    \n    -- Metadata del origen\n    origen_csv_drive VARCHAR(255),\n    \n    -- Estado actual\n    semaforo_id INTEGER REFERENCES semaforo(id) ON DELETE SET NULL,\n    fase_id INTEGER REFERENCES fase(id) ON DELETE SET NULL,\n    \n    -- Auditoría\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    \n    CONSTRAINT unique_caso_paciente_fecha UNIQUE(paciente_id, fecha_inicio)\n);\n\n-- Tabla: ControlCaso (0..* - múltiples controles por caso)\n-- ACTUALIZADA: Incluye campos de observaciones\nCREATE TABLE control_caso (\n    id SERIAL PRIMARY KEY,\n    caso_clinico_id INTEGER NOT NULL REFERENCES caso_clinico(id) ON DELETE CASCADE,\n    \n    fecha_control DATE NOT NULL,\n    fecha_ejecucion_control DATE,\n    estado_control VARCHAR(50) DEFAULT 'pendiente', -- 'pendiente', 'realizado', 'vencido'\n    dias_hasta_control INTEGER,\n    \n    -- Estado en este control específico\n    semaforo_id INTEGER REFERENCES semaforo(id),\n    fase_id INTEGER REFERENCES fase(id),\n    puntaje_semaforo DECIMAL(5,2),\n    \n    -- Observaciones (previamente en tabla separada)\n    observacion TEXT,\n    observacion_original TEXT,\n    json_filtrado_llm JSONB,\n    \n    notas TEXT,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n\n-- Tabla: Predicciones\nCREATE TABLE predicciones (\n    id SERIAL PRIMARY KEY,\n    control_caso_id INTEGER NOT NULL REFERENCES control_caso(id) ON DELETE CASCADE,\n    \n    prediccion TEXT NOT NULL,\n    detalle TEXT,\n    confianza DECIMAL(5,2),\n    modelo_usado VARCHAR(100),\n    devolucion_medico TEXT,\n    \n    fecha_prediccion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n\n-- ============================================\n-- ÍNDICES PARA OPTIMIZACIÓN\n-- ============================================\n\nCREATE INDEX idx_caso_clinico_paciente ON caso_clinico(paciente_id);\nCREATE INDEX idx_caso_clinico_semaforo ON caso_clinico(semaforo_id);\nCREATE INDEX idx_caso_clinico_fecha_inicio ON caso_clinico(fecha_inicio);\nCREATE INDEX idx_caso_clinico_estado ON caso_clinico(fase_id);\n\nCREATE INDEX idx_control_caso_caso ON control_caso(caso_clinico_id);\nCREATE INDEX idx_control_caso_fecha ON control_caso(fecha_control);\nCREATE INDEX idx_control_caso_estado ON control_caso(estado_control);\n\nCREATE INDEX idx_predicciones_control ON predicciones(control_caso_id);\n\nCREATE INDEX idx_paciente_base_of ON paciente(base_of_id);\nCREATE INDEX idx_base_of_distrito ON base_of(distrito_id);\nCREATE INDEX idx_distrito_cia ON distrito(cia_id);\n\n-- Índice para búsquedas en el JSON filtrado\nCREATE INDEX idx_control_caso_json_filtrado ON control_caso USING GIN (json_filtrado_llm);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        320,
+        112
+      ],
+      "id": "ca4cf792-7968-4a7f-8c2c-31dd47264589",
+      "name": "Create Tables"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tQTx2KdWPm188ich",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1040,
+        272
+      ],
+      "id": "b2b2d17c-4f24-4384-91cc-f17dcce1811c",
+      "name": "Insertar en la BD",
+      "alwaysOutputData": false,
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Eliminar todas las tablas en orden inverso de dependencias\n-- El CASCADE elimina automáticamente las dependencias\n\nDROP TABLE IF EXISTS predicciones CASCADE;\nDROP TABLE IF EXISTS control_caso CASCADE;\nDROP TABLE IF EXISTS caso_clinico CASCADE;\nDROP TABLE IF EXISTS paciente CASCADE;\nDROP TABLE IF EXISTS diagnostico CASCADE;\nDROP TABLE IF EXISTS base_of CASCADE;\nDROP TABLE IF EXISTS distrito CASCADE;\nDROP TABLE IF EXISTS cia CASCADE;\nDROP TABLE IF EXISTS semaforo CASCADE;\nDROP TABLE IF EXISTS fase CASCADE;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        112
+      ],
+      "id": "4409b57c-148c-42c5-b72c-fe43cb4a3364",
+      "name": "Drop Tables If Exist"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "D6N6FPQQV2Z9DOmr",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        -224,
+        224
+      ],
+      "id": "88e4663a-f243-4bef-a894-185013dc6868",
+      "name": "TransformCasoFromExcel"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        880,
+        272
+      ],
+      "id": "d74be7d6-c3bf-449c-add3-efb5d5b35a47",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "content": "## Insertar Casos\n",
+        "height": 336,
+        "width": 768,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        784,
+        144
+      ],
+      "id": "fdfb5685-25e9-42a7-9786-96c40a94a92e",
+      "name": "Sticky Note3"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Descargar Planilla Excel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Descargar Planilla Excel": {
+      "main": [
+        [
+          {
+            "node": "Convertir XLSX a Json",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convertir XLSX a Json": {
+      "main": [
+        [
+          {
+            "node": "TransformCasoFromExcel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Semaforo - Fase": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Tables": {
+      "main": [
+        [
+          {
+            "node": "Insert Semaforo - Fase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Drop Tables If Exist": {
+      "main": [
+        [
+          {
+            "node": "Create Tables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insertar en la BD": {
+      "main": [
+        [
+          {
+            "node": "QUERY SQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TransformCasoFromExcel": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Drop Tables If Exist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Insertar en la BD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "6bd322ca-24f0-4feb-9538-23585915618d",
+  "meta": {
+    "instanceId": "5401c9f8e71c27ad222e069d21f03b4152784c83c549bb52ce6071eb671ff35b"
+  },
+  "id": "8PZpqNtoCQmYfFzi",
+  "tags": [
+    {
+      "createdAt": "2025-11-02T19:28:27.755Z",
+      "updatedAt": "2025-11-02T19:28:27.755Z",
+      "id": "dfJBmQLA6ia8WlGh",
+      "name": "Ingegrales"
+    }
+  ]
+}

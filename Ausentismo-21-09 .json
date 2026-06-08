@@ -1,0 +1,581 @@
+{
+  "name": "Ausentismo-21-09",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "1GJZw1A5jTEJt_15nroj9QpeW9rD9Q06ysVDnFvIUEJ8",
+          "mode": "list",
+          "cachedResultName": "Ausentismo 21-09",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1GJZw1A5jTEJt_15nroj9QpeW9rD9Q06ysVDnFvIUEJ8/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Casos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1GJZw1A5jTEJt_15nroj9QpeW9rD9Q06ysVDnFvIUEJ8/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        -304,
+        -16
+      ],
+      "id": "c0599c09-e2a8-40e8-a94c-a7ddbb4dd651",
+      "name": "Google Sheets Trigger",
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "th81fK7tEsarkYIJ",
+          "name": "Google Sheets Trigger account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8b346bd9-8301-4a5c-ab09-abcbcf178077",
+              "name": "case_id",
+              "value": "={{ $json.case_id }}",
+              "type": "string"
+            },
+            {
+              "id": "3a789814-47dd-4497-acbf-09e0dbacac2c",
+              "name": "snapshot_cur_str",
+              "value": "={{ JSON.stringify({\n  \ncolor_actual: $json.color_actual ?? null,\n  \nfase_actual: $json.fase_actual ?? null,\n  \nfecha_ultima_revision: String($json.fecha_ultima_revision ?? ''),\n  \nfecha_proxima_revision: String($json.fecha_proxima_revision ?? ''), \n\nempleado_nombre: $json.empleado_nombre ?? null\n\n}) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -128,
+        -16
+      ],
+      "id": "7b0c997d-e242-4652-a8a9-f73853e3a589",
+      "name": "BuildSnapshot"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "6QyvmbIix756pK55",
+          "mode": "list",
+          "cachedResultName": "casos_previos",
+          "cachedResultUrl": "/projects/DwGKeS79BFwWzDkg/datatables/6QyvmbIix756pK55"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "case_id",
+              "keyValue": "={{ String($json.case_id) }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "snapshot": "={{ $('BuildSnapshot').item.json.snapshot_cur_str }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "case_id",
+              "displayName": "case_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "snapshot",
+              "displayName": "snapshot",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        944,
+        -144
+      ],
+      "id": "6c2ce7fe-f100-4c2a-9e71-4c68e4210506",
+      "name": "Actualizacion de registro historial de caso"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map((item, idx) => {\n  const snapshotActual = $items(\"BuildSnapshot\")[idx]?.json?.snapshot_cur_str ?? \"\";\n  const entradaAnterior = typeof item.json.snapshot === \"string\" ? item.json.snapshot : \"\";\n\n  const canon = s => { const t = String(s ?? \"\").trim(); try { return JSON.stringify(JSON.parse(t)); } catch { return t; } };\n  const cambio = canon(snapshotActual) !== canon(entradaAnterior);\n\n  return { json: { ...item.json, snapshotActual, entradaAnterior, cambio } };\n});\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        336,
+        -128
+      ],
+      "id": "f0c4ffdf-eab6-4c3e-8cc7-dbef4a685e59",
+      "name": "comparo Snapshot actual y el viejo"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "e3YMD9kjgCLo58wC",
+          "mode": "list",
+          "cachedResultName": "version_global",
+          "cachedResultUrl": "/projects/DwGKeS79BFwWzDkg/datatables/e3YMD9kjgCLo58wC"
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        1888,
+        0
+      ],
+      "id": "78ad239b-bb30-49ef-a62d-6bcbe3e55fba",
+      "name": "Obtendo version global para front"
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $json.dataTableRow || null;        // fila obtenida del Get\nconst v = row?.data?.value ?? \"0\";             // si no hay fila, arranca en \"0\"\nconst current = Number(v) || 0;                // lo convierto a número seguro\n\nreturn [{\n  json: { \n    value: String(current + 1),                // nueva versión = 8\n    last_updated: new Date().toISOString()\n    // fecha actual\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2128,
+        0
+      ],
+      "id": "44b29874-ca20-4d27-b846-36c2e27ceda2",
+      "name": "calculo el aumento de version"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "e3YMD9kjgCLo58wC",
+          "mode": "list",
+          "cachedResultName": "version_global",
+          "cachedResultUrl": "/projects/DwGKeS79BFwWzDkg/datatables/e3YMD9kjgCLo58wC"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyValue": "={{ $('Obtendo version global para front').item.json.id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "value": "={{ $json.value }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "key",
+              "displayName": "key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "value",
+              "displayName": "value",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        2384,
+        0
+      ],
+      "id": "75cb5f75-8da2-418c-9d58-c476a88dc290",
+      "name": "actualizo el aumento de version"
+    },
+    {
+      "parameters": {
+        "operation": "rowNotExists",
+        "dataTableId": {
+          "__rl": true,
+          "value": "6QyvmbIix756pK55",
+          "mode": "list",
+          "cachedResultName": "casos_previos",
+          "cachedResultUrl": "/projects/DwGKeS79BFwWzDkg/datatables/6QyvmbIix756pK55"
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        80,
+        112
+      ],
+      "id": "e9f75639-c2a3-440d-8bb5-2d0fcf908a5f",
+      "name": "hay filas nuevas?"
+    },
+    {
+      "parameters": {
+        "operation": "rowExists",
+        "dataTableId": {
+          "__rl": true,
+          "value": "6QyvmbIix756pK55",
+          "mode": "list",
+          "cachedResultName": "casos_previos",
+          "cachedResultUrl": "/projects/DwGKeS79BFwWzDkg/datatables/6QyvmbIix756pK55"
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        80,
+        -128
+      ],
+      "id": "e8854f36-ab54-44ae-a4d2-16838f3cac3a",
+      "name": "Filas que existian"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b2ab226a-0aa9-4666-a0f4-b4c22c8fddfb",
+              "leftValue": "={{ $json.cambio }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        624,
+        -128
+      ],
+      "id": "b9b871e1-9855-4d51-b08f-643adc085eec",
+      "name": "If \"cambió\""
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1280,
+        0
+      ],
+      "id": "6ac844fa-ac48-458f-bf3b-ab69c3aeb747",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "6QyvmbIix756pK55",
+          "mode": "list",
+          "cachedResultName": "casos_previos",
+          "cachedResultUrl": "/projects/DwGKeS79BFwWzDkg/datatables/6QyvmbIix756pK55"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "case_id",
+              "keyValue": "={{ String($json.case_id) }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "snapshot": "={{ $('BuildSnapshot').item.json.snapshot_cur_str }}",
+            "case_id": "={{ $json.case_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "case_id",
+              "displayName": "case_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "snapshot",
+              "displayName": "snapshot",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        960,
+        112
+      ],
+      "id": "7abd3020-53be-49ad-8d73-3f5c04e53237",
+      "name": "Actualizacion de registro historial de caso1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://laboral-monitor.lovable.app",
+        "sendBody": true,
+        "specifyBody": "={\n  \"version\": \"{{ $json.nextVersion || $json.value }}\",\n  \"updatedAt\": \"{{ $json.updatedAt || new Date().toISOString() }}\",\n  \"count\": \"{{ $item(0).$node['Resumir conteo'].json.count }}\",\n  \"source\": \"casos\"\n}\n",
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2592,
+        0
+      ],
+      "id": "f0ebd853-05cb-444c-be5f-a4bbf20ff85c",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { count: $items().length } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1584,
+        0
+      ],
+      "id": "347aa013-de4b-4038-a52e-693cb90d878e",
+      "name": "Resumir conteo"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Sheets Trigger": {
+      "main": [
+        [
+          {
+            "node": "BuildSnapshot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BuildSnapshot": {
+      "main": [
+        [
+          {
+            "node": "Filas que existian",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "hay filas nuevas?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "comparo Snapshot actual y el viejo": {
+      "main": [
+        [
+          {
+            "node": "If \"cambió\"",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizacion de registro historial de caso": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtendo version global para front": {
+      "main": [
+        [
+          {
+            "node": "calculo el aumento de version",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "calculo el aumento de version": {
+      "main": [
+        [
+          {
+            "node": "actualizo el aumento de version",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "actualizo el aumento de version": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filas que existian": {
+      "main": [
+        [
+          {
+            "node": "comparo Snapshot actual y el viejo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If \"cambió\"": {
+      "main": [
+        [
+          {
+            "node": "Actualizacion de registro historial de caso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "hay filas nuevas?": {
+      "main": [
+        [
+          {
+            "node": "Actualizacion de registro historial de caso1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizacion de registro historial de caso1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Resumir conteo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resumir conteo": {
+      "main": [
+        [
+          {
+            "node": "Obtendo version global para front",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b6307ea4-5721-430b-8b0d-7d55f8df0704",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "5401c9f8e71c27ad222e069d21f03b4152784c83c549bb52ce6071eb671ff35b"
+  },
+  "id": "6Vw3GVbB0mueadkO",
+  "tags": []
+}

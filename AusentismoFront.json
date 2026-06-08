@@ -1,0 +1,195 @@
+{
+  "name": "AusentismoFront",
+  "nodes": [
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1GJZw1A5jTEJt_15nroj9QpeW9rD9Q06ysVDnFvIUEJ8",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Casos",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        48
+      ],
+      "id": "c9f6f437-3b33-4fbc-bd8f-97cfba11ba7c",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "IYmp3BjxWLybaBDw",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e3c8141a-f7d3-4946-b08a-f13c2b4bdfb2",
+              "name": "case_id",
+              "value": "={{ $json.case_id }}",
+              "type": "number"
+            },
+            {
+              "id": "98a789b3-af63-4c9a-aadb-195cdad3775a",
+              "name": "empleado_nombre",
+              "value": "={{ $json.empleado_nombre }}",
+              "type": "string"
+            },
+            {
+              "id": "73c39eb7-d05f-419b-bc73-656dbfc45c45",
+              "name": "color_actual",
+              "value": "={{ $json.color_actual }}",
+              "type": "string"
+            },
+            {
+              "id": "e97fb95c-be35-46ba-a1d9-9e95125461e8",
+              "name": "fase_actual",
+              "value": "={{ $json.fase_actual }}",
+              "type": "string"
+            },
+            {
+              "id": "2dc3d0ef-8417-4c6d-8b8c-309e0bd3e0aa",
+              "name": "fecha_ultima_revision",
+              "value": "={{ $json.fecha_ultima_revision }}",
+              "type": "string"
+            },
+            {
+              "id": "0a8b9154-9f47-4bfd-9082-bf8df62f3bab",
+              "name": "fecha_proxima_revision",
+              "value": "={{ $json.fecha_proxima_revision }}",
+              "type": "string"
+            },
+            {
+              "id": "eeeb5bc3-97f6-4d35-83e8-35ad5aae0c77",
+              "name": "cambio",
+              "value": "true",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        432,
+        48
+      ],
+      "id": "2c28cc88-e538-472d-b584-dee75d5a2935",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{\n  {\n    drive_name: ($items()[0].json.drive_name || 'Casos'),\n    casos: $items().map(i => ({\n      case_id: i.json.case_id,\n      empleado_nombre: i.json.empleado_nombre,\n      color_actual: i.json.color_actual,\n      fase_actual: i.json.fase_actual,\n      fecha_ultima_revision: String(i.json.fecha_ultima_revision || ''),\n      fecha_proxima_revision: String(i.json.fecha_proxima_revision || ''),\n      cambio: Boolean(i.json.cambio)\n    }))\n  }\n}}\n\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        960,
+        48
+      ],
+      "id": "d6037cd5-f8a1-4b4f-a031-b6db70e25c66",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "path": "casos",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -64,
+        48
+      ],
+      "id": "74302579-4580-49d5-b67c-9df69965e695",
+      "name": "Webhook",
+      "webhookId": "dedd6d9e-4e6f-4578-8636-1e26a203a6fa"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Convierte dd/m/yyyy -> yyyy-mm-dd\nfunction toISO(d) {\n  if (!d) return null;\n  // admite \"22/9/2026\" o \"22-9-2026\"\n  const m = String(d).trim().replace(/-/g,'/').match(/^(\\d{1,2})\\/(\\d{1,2})\\/(\\d{4})$/);\n  if (!m) return d; // si ya viene ISO, lo deja igual\n  const [_, dd, mm, yyyy] = m;\n  const pad = s => s.toString().padStart(2,'0');\n  return `${yyyy}-${pad(mm)}-${pad(dd)}`;\n}\n\n// Normaliza color (primera letra mayúscula)\nfunction normColor(s){\n  if(!s) return s;\n  const t = String(s).trim().toLowerCase();\n  return t.charAt(0).toUpperCase() + t.slice(1);\n}\n\n// Construir la lista de casos desde los items de entrada\nconst casos = items.map(({ json }) => {\n  const j = json;\n\n  // la hoja parece tener \"cambio \" con espacio al final\n  const rawCambio = j.cambio ?? j['cambio'] ?? false;\n\n  return {\n    case_id: String(j.case_id ?? j.id ?? ''),\n    empleado_nombre: String(j.empleado_nombre ?? '').trim(),\n    color_actual: normColor(j.color_actual),\n    fase_actual: String(j.fase_actual ?? '').trim(),\n    fecha_ultima_revision: toISO(j.fecha_ultima_revision),\n    fecha_proxima_revision: toISO(j.fecha_proxima_revision),\n    cambio: (typeof rawCambio === 'boolean')\n              ? rawCambio\n              : String(rawCambio).trim().toLowerCase() === 'true'\n  };\n});\n\n// VERSION: número derivado del contenido (cambia si cambian casos)\n// (hash simple; si preferís, podés usar Date.now())\nconst signature = casos.map(c =>\n  `${c.case_id}|${c.color_actual}|${c.fase_actual}|${c.fecha_ultima_revision}|${c.fecha_proxima_revision}|${c.cambio}`\n).join('~');\nlet h = 0; for (const ch of signature) { h = ((h<<5)-h) + ch.charCodeAt(0); h |= 0; }\nconst version = Math.abs(h);\n\n// Nombre del “drive” (cámbialo o léelo de otra celda si querés)\nconst drive_name = 'Casos Medicina Laboral – Septiembre';\n\nreturn [\n  {\n    json: {\n      drive_name,\n      version,\n      casos\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        48
+      ],
+      "id": "aea7ab1c-e0d1-4306-a3f1-0c58a75db86d",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1e5dde6b-541c-4e5e-9356-4b80c0748243",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "5401c9f8e71c27ad222e069d21f03b4152784c83c549bb52ce6071eb671ff35b"
+  },
+  "id": "7PhQnk5jKxuom0Kr",
+  "tags": []
+}

@@ -1,0 +1,183 @@
+{
+  "name": "Insetar Nuevo Caso",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "1gDahtkboHSsBCaw1tLkJxNi57vtuKXhf9pMTUTjGbmE",
+          "mode": "list",
+          "cachedResultName": "HC-Test",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gDahtkboHSsBCaw1tLkJxNi57vtuKXhf9pMTUTjGbmE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Hoja 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gDahtkboHSsBCaw1tLkJxNi57vtuKXhf9pMTUTjGbmE/edit#gid=0"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        384,
+        -64
+      ],
+      "id": "8d86e7bc-69bb-4120-a2b0-ae9391388aca",
+      "name": "Google Sheets Trigger"
+    },
+    {
+      "parameters": {
+        "content": "## Insetar Nuevo Caso \nSe ejecuta cunado se crea una nueva fila el excel de drive. Se caputran los datos del nuevo caso y se cargan en la base de datos.",
+        "height": 288,
+        "width": 960
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        336,
+        -160
+      ],
+      "id": "f98462c8-5026-43af-80d1-27501fdb4da2",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "D6N6FPQQV2Z9DOmr",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        624,
+        -64
+      ],
+      "id": "cea99655-ef89-4f15-ab97-55f5191ed8e2",
+      "name": "TransformCasoFromExcel"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "tQTx2KdWPm188ich",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        848,
+        -64
+      ],
+      "id": "2dcd9f1c-ce97-4c7f-abb5-4f22d0c408bf",
+      "name": "Insertar en la BD",
+      "alwaysOutputData": false,
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n    -- CASO CLÍNICO\n    cc.id as caso_id,\n    cc.fecha_inicio,\n    cc.fecha_fin,\n    cc.tipo_evento,\n    cc.origen_csv_drive,\n    \n    -- PACIENTE\n    p.id as paciente_id,\n    p.legajo,\n    p.legajo_con_ceros,\n    p.nombre_apellido as paciente,\n    \n    -- DIAGNÓSTICO\n    diag.id as diagnostico_id,\n    diag.nombre as diagnostico,\n    diag.detalle as diagnostico_detalle,\n    \n    -- UBICACIÓN\n    c.nombre as cia,\n    d.nombre as distrito,\n    bo.nombre as base_oficina,\n    \n    -- ESTADO DEL CASO\n    f.nombre as fase_caso,\n    s.color as semaforo_caso,\n    \n    -- AUDITORÍA\n    cc.created_at as fecha_creacion_caso,\n    cc.updated_at as fecha_actualizacion_caso\n    \nFROM caso_clinico cc\nJOIN paciente p ON cc.paciente_id = p.id\nLEFT JOIN diagnostico diag ON cc.diagnostico_id = diag.id\nLEFT JOIN base_of bo ON p.base_of_id = bo.id\nLEFT JOIN distrito d ON bo.distrito_id = d.id\nLEFT JOIN cia c ON d.cia_id = c.id\nLEFT JOIN fase f ON cc.fase_id = f.id\nLEFT JOIN semaforo s ON cc.semaforo_id = s.id\n\nWHERE cc.id = 1;  -- ← Cambiar por el ID del caso que quieres ver",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1056,
+        -64
+      ],
+      "id": "45990a13-c607-407f-9829-207256f24378",
+      "name": "Execute a SQL query"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Sheets Trigger": {
+      "main": [
+        [
+          {
+            "node": "TransformCasoFromExcel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TransformCasoFromExcel": {
+      "main": [
+        [
+          {
+            "node": "Insertar en la BD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insertar en la BD": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "548321b8-7577-4e91-964e-98b842def680",
+  "meta": {
+    "instanceId": "5401c9f8e71c27ad222e069d21f03b4152784c83c549bb52ce6071eb671ff35b"
+  },
+  "id": "UQOz9VlaNgVlc7Kn",
+  "tags": [
+    {
+      "createdAt": "2025-11-02T19:28:27.755Z",
+      "updatedAt": "2025-11-02T19:28:27.755Z",
+      "id": "dfJBmQLA6ia8WlGh",
+      "name": "Ingegrales"
+    }
+  ]
+}

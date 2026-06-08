@@ -1,0 +1,543 @@
+{
+  "name": "Ausentismo-Oficial",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "74556622-c8ef-4fcf-a9c3-2e08e82733f3",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -576,
+        -16
+      ],
+      "id": "2695c7fa-6fe9-4ca2-b0c9-e4c6bafd7a5d",
+      "name": "Webhook",
+      "webhookId": "74556622-c8ef-4fcf-a9c3-2e08e82733f3"
+    },
+    {
+      "parameters": {
+        "respondWith": "noData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        2128,
+        0
+      ],
+      "id": "b6b074f9-10e0-4bfb-8b17-d565aa828c43",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "No se puede completar la prediccion y estado de semáforo, faltan datos:\nRevise si el id del caso es nulo.\nRevise si la observación del caso es nula.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        96,
+        -496
+      ],
+      "id": "0c274246-1be6-45aa-af5a-2dbab83e2569",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  const d = item.json.body.data;\n\n  // --- utilidades básicas ---\n  const normalizeText = (txt) => {\n    if (!txt) return \"\";\n    return txt\n      .toString()\n      .normalize(\"NFD\")\n      .replace(/[\\u0300-\\u036f]/g, \"\")\n      .replace(/[^a-zA-Z0-9áéíóúüñ., ]/g, \" \")   // genérico (sin /)\n      .replace(/\\s+/g, \" \")\n      .trim()\n      .toLowerCase();\n  };\n\n  // normalizador SOLO para observaciones (permite \"/\"; opcionalmente \"- :\")\n  const normalizeObs = (txt) => {\n    if (!txt) return \"\";\n    return txt\n      .toString()\n      .normalize(\"NFD\")\n      .replace(/[\\u0300-\\u036f]/g, \"\")\n      .replace(/[^a-zA-Z0-9áéíóúüñ., /:-]/g, \" \") // <-- conserva / (y - :)\n      .replace(/\\s+/g, \" \")\n      .trim()\n      .toLowerCase();\n  };\n\n  const normalizeUpper = (txt) => {\n    if (!txt) return null;\n    return txt\n      .toString()\n      .normalize(\"NFD\")\n      .replace(/[\\u0300-\\u036f]/g, \"\")\n      .trim()\n      .toUpperCase();\n  };\n\n  // === Fechas: usar HOY y normalizar a comienzo de día ===\n  const startOfDay = (dt) => {\n    const d = new Date(dt);\n    d.setHours(0, 0, 0, 0);\n    return d;\n  };\n  const toDate = (val) => (val ? startOfDay(new Date(val)) : null);\n  const diffDays = (a, b) => (a && b ? Math.round((a - b) / (1000*60*60*24)) : null);\n\n  const hoy = startOfDay(new Date());\n  const fechaInicio = toDate(d[\"Fecha de Inicio\"]);\n  const proximoCtrl = toDate(d[\"Próximo Control\"]);\n\n  const diasDesdeInicio = fechaInicio ? diffDays(hoy, fechaInicio) : null;\n  let diasHastaControlSigned = proximoCtrl ? diffDays(proximoCtrl, hoy) : null;\n  const diasHastaControlAbs = diasHastaControlSigned !== null ? diasHastaControlSigned : null;\n  //const signoControl = diasHastaControlSigned !== null ? (diasHastaControlSigned < 0 ? \"-\" : \"+\") : null;\n\n  const diasBaja = d[\"Días de BAJA\"] ?? null;\n\n  // --- salida normalizada ---\n  const out = {\n    id_control: d[\"id\"] ?? null,\n    cia: normalizeUpper(d[\"CIA\"]),\n    distrito: normalizeUpper(d[\"DISTRITO\"]),\n    base: normalizeUpper(d[\"Base/Of\"]),\n    tipo_evento: normalizeUpper(d[\"Tipo de Evento\"]),\n    fase: normalizeUpper(d[\"Tipo de Evento\"]),\n    diagnostico: normalizeText(d[\"Diagnóstico\"]),\n    observacion: normalizeObs(d[\"OBSERVACIONES\"]), // <-- usa el normalizador que conserva \"/\"\n    dias_desde_inicio: diasDesdeInicio,\n    dias_hasta_control: diasHastaControlAbs,\n    //dias_hasta_control_signo: signoControl,\n    dias_baja: diasBaja >= 0 ? diasBaja : 0,\n    valido: true,\n    errores: []\n  };\n\n  // --- validaciones mínimas ---\n  if (!out.observacion || out.observacion.length < 15) {\n    out.valido = false;\n    out.errores.push(\"Observación vacía o demasiado corta\");\n  }\n  if (!out.diagnostico) {\n    out.valido = false;\n    out.errores.push(\"Diagnóstico faltante\");\n  }\n\n  return { json: out };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        -16
+      ],
+      "id": "67062b79-e0ac-4213-b736-a582d73d21e7",
+      "name": "Normalizacion de Datos"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "10U5kW4rCkIgVY5XLf50mzji--NenK2XKvl55WLcTQCY",
+          "mode": "list",
+          "cachedResultName": "Pyoecto-Ausentismo",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10U5kW4rCkIgVY5XLf50mzji--NenK2XKvl55WLcTQCY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10U5kW4rCkIgVY5XLf50mzji--NenK2XKvl55WLcTQCY/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Webhook').item.json.body.data.id }}",
+            "color_sugerido": "={{ $json.color_sugerido }}",
+            "confianza sobre la prediccion del color": "={{ $json.confianza_actual }}",
+            "prediccion": "={{ $json.prediccion }}",
+            "justificacion prediccion": "={{ $json.explicacion_corta }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "CIA",
+              "displayName": "CIA",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "DISTRITO",
+              "displayName": "DISTRITO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Base/Of",
+              "displayName": "Base/Of",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Fecha de Inicio",
+              "displayName": "Fecha de Inicio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tipo de Evento",
+              "displayName": "Tipo de Evento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Equipo",
+              "displayName": "Equipo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Operadora",
+              "displayName": "Operadora",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Legajo",
+              "displayName": "Legajo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Legajo con ceros",
+              "displayName": "Legajo con ceros",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Apellido y Nombre",
+              "displayName": "Apellido y Nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Próximo Control",
+              "displayName": "Próximo Control",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "DIAS HASTA CONTROL",
+              "displayName": "DIAS HASTA CONTROL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Días de BAJA",
+              "displayName": "Días de BAJA",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Diagnóstico",
+              "displayName": "Diagnóstico",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "OBSERVACIONES",
+              "displayName": "OBSERVACIONES",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "enviar-Semaforo-Prediccion",
+              "displayName": "enviar-Semaforo-Prediccion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "color_sugerido",
+              "displayName": "color_sugerido",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "confianza sobre la prediccion del color",
+              "displayName": "confianza sobre la prediccion del color",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "justificacion prediccion",
+              "displayName": "justificacion prediccion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "prediccion",
+              "displayName": "prediccion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "color_validado",
+              "displayName": "color_validado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "prediccion_validada",
+              "displayName": "prediccion_validada",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "causa_correccion (opcional)",
+              "displayName": "causa_correccion (opcional)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1648,
+        0
+      ],
+      "id": "7491d0e3-9595-4925-841b-c409aa31e80b",
+      "name": "Enviar La prediccion",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "IYmp3BjxWLybaBDw",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3011cbc3-9403-465a-84a0-fad299589bcf",
+              "leftValue": "={{ $json.observacion }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "e9674c3d-78f5-43d1-afca-d7041b90ede5",
+              "leftValue": "={{ $json.observacion }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "d856dc19-a0ee-4344-8a3a-f702777bc16f",
+              "leftValue": "={{ $json.id_control }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "31d0a920-d698-4ac3-ba4f-567f0735b541",
+              "leftValue": "={{ $json.id_control }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -48,
+        -16
+      ],
+      "id": "80e11bb0-ef3b-4205-aa27-c270b2a3336a",
+      "name": "viene uuid y observacion?"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Sos un médico laboral asistente especializado en evaluación de evolución de casos clínicos laborales en Argentina. Analizá el siguiente registro y devolvé SIEMPRE una salida estrictamente en JSON, sin texto adicional, sin comentarios, ni explicaciones fuera del JSON. Usá solo español, vocabulario médico y priorizá evidencia explícita.\n\nTu objetivo: razonar como analista de aseguradora. No ponderes la gravedad de la patología sino el flujo del caso (seguimiento, adherencia, controles). Un cuadro grave puede ser Verde si el seguimiento es correcto.\nCriterios del semáforo (obligatorios):\nVerde (preferir ante la duda): evolución acorde o estable; controles/estudios cumplidos o con turno programado; adherencia a FKT/medicación; posoperatorio dentro de plazos esperables. Un control futuro programado NO implica amarillo.\n\n\nAmarillo: evolución lenta o síntomas persistentes con seguimiento activo, pero faltan precisiones (p. ej., estudios indicados sin fecha/sin constancia de gestión) o hay cambios terapéuticos en observación.\n\n\nRojo: falta de adherencia documentada (no concurre, rechaza FKT/estudios), pérdida de seguimiento, suspensión injustificada de tratamiento, complicación aguda que requiere reevaluación urgente.\n\n\nReglas adicionales:\nNo inventes datos. Basate solo en lo escrito.\n\n\nSé conciso y objetivo.\n\n\nSi la información crítica falta → Amarillo.\n\n\nSi el seguimiento es correcto aunque la evolución sea lenta → Verde.\n\n\nFormato de salida (JSON estricto):\n {\n \"color_sugerido\": \"Rojo|Amarillo|Verde\",\n \"explicacion_corta\": \"máx. 180 caracteres; menciona evidencias clave del registro\",\n \"confianza_actual\": \"número entre 0 y 1 con dos decimales (ej. 0.87)\",\n \"prediccion\": \"qué esperar al próximo control (p. ej., 'continúa FKT con buena respuesta', 'posible alta si mantiene evolución', 'reprogramar control faltante')\"\n }\nGenerá únicamente ese JSON, sin texto extra.\n\n",
+              "role": "system"
+            },
+            {
+              "content": "=Recibirás un registro clínico ya normalizado y deberás producir una salida JSON estricta con:\n- El color sugerido actual (Rojo, Amarillo o Verde).\n- Una predicción concreta de cómo debería evolucionar el caso para la próxima consulta.\n\nObjetivo:\nDeterminar el color actual según la evidencia disponible, considerando controles atrasados o instancias de control no realizadas.\n\nPredicción PRÓXIMO CONTROL:\nQué se espera que suceda en la próxima revisión (en una frase orientada a acción/estado).\n\nDetección de atraso:\n- El campo dias_hasta_control puede ser positivo o negativo.\n- Un valor negativo implica “control vencido o atrasado”.\n\nRegla sobre fechas:\n- Si en la observación aparecen fechas tipo dd/mm (ej. “16/7”), asumilas como del año actual.\n-Si aparece fechas de tipo dd/mm/aa o dd/mm/aaaa, el año es el que indica aa o aaaa\n- Si esa fecha ya pasó respecto de fecha_hoy y no hay evidencia de que el control se haya realizado \n  (ej. “se realizó”, “post op”, “extracción de puntos realizada”), eso afecta negativamente al color del semáforo.\n\nCriterios de color (resumen):\n- **Verde**: buena evolución, controles realizados en tiempo y forma, alta cercana o rehabilitación estable.\n- **Amarillo**: evolución lenta o con pendientes gestionables (estudios, turnos, trámites, intercurrencias leves).\n- **Rojo**: complicaciones, reoperaciones, rechazos críticos, empeoramiento, controles vencidos relevantes.\n- En casos ambiguos, elegir **Amarillo** con baja confianza.\n\nReglas de evidencia:\n- Priorizá hechos explícitos en observacion (ej. “buena evolución”, “retiro de puntos”, “reoperar”, “rechazo ART”, “bloqueo radicular”).\n- Las fechas tipo 16/7 son del año en curso y deben usarse para el análisis.\n- Si hay indicadores contradictorios, reflejalo bajando la confianza y agregando una justificación breve.\n\nCampos del registro:\nobservacion: \"{{ $json.observacion }}\"\ndiagnostico: \"{{ $json.diagnostico }}\"\nfase: \"{{ $json.fase }}\"\ndias_desde_inicio: {{ $json.dias_desde_inicio }}\ndias_hasta_control: {{ $json.dias_hasta_control }}\n\nRecordá:\ndias_hasta_control es la cantidad de dias que falta para el control \ndias_desde_inicio indica cuantos dias hace que inicio el caso \nSi hay fecha tipo dd/mm en observacion, interpretala como del año actual.\nsi hay fecha tipo dd/mm/aa o dd/mm/aaaa, aaaa o aa es el año al que hace referencia esa anotacon\nSi esa fecha es anterior a fecha_hoy y no hay evidencia de que el control se haya cumplido,debería afectar al color del semáforo.\n\nSalida requerida: solo el JSON exactamente con el esquema indicado.\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        688,
+        0
+      ],
+      "id": "58e8c435-51e1-44b4-9625-0bbe1d4292c2",
+      "name": "Prediccion",
+      "credentials": {
+        "openAiApi": {
+          "id": "AUsV2NndRLQ8ZLDC",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  // 1) Localizar el string con JSON (según tu salida)\n  //    Tu ejemplo es un array con un objeto que tiene .message.content\n  const root = item.json;\n  const content = root?.[0]?.message?.content      // como en tu muestra\n                ?? root?.message?.content\n                ?? root?.data?.[0]?.message?.content\n                ?? \"\";\n\n  // 2) Extraer JSON (por si el modelo dejó saltos de línea)\n  const match = content.match(/\\{[\\s\\S]*\\}/m);\n  const jsonStr = match ? match[0] : content;\n\n  // 3) Parsear y validar campos mínimos\n  let out;\n  try {\n    out = JSON.parse(jsonStr);\n  } catch (e) {\n    return { json: { error: \"JSON inválido\", raw_content: content } };\n  }\n\n  const enumColores = [\"Rojo\", \"Amarillo\", \"Verde\"];\n  const color = enumColores.includes(out.color_sugerido) ? out.color_sugerido : \"Amarillo\";\n  const explicacion = String(out.explicacion_corta || \"\").slice(0, 180);\n  const conf = Number.isFinite(Number(out.confianza_actual)) ? Number(out.confianza_actual) : 0.0;\n\n  return {\n    json: {\n      color_sugerido: color,\n      explicacion_corta: explicacion,\n      confianza_actual: Number(conf.toFixed(2)),\n      prediccion: String(out.prediccion || \"\"),\n      //  conservar respuesta cruda por auditoría\n      //_raw_model: root\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        0
+      ],
+      "id": "4236183e-9c2b-4e3b-8736-ee2b96c0e4d9",
+      "name": "Dar formato a la prediccion"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalizacion de Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizacion de Datos": {
+      "main": [
+        [
+          {
+            "node": "viene uuid y observacion?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar La prediccion": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "viene uuid y observacion?": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prediccion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prediccion": {
+      "main": [
+        [
+          {
+            "node": "Dar formato a la prediccion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dar formato a la prediccion": {
+      "main": [
+        [
+          {
+            "node": "Enviar La prediccion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "99dd562a-6c29-4ff2-b4f6-9cc090a9e468",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "5401c9f8e71c27ad222e069d21f03b4152784c83c549bb52ce6071eb671ff35b"
+  },
+  "id": "AklZs45xTzfJ1ni8",
+  "tags": []
+}

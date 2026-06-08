@@ -1,0 +1,102 @@
+{
+  "name": "TransformCasoFromExcel",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Tranformación de Datos\nSe procesa un caso (una fila del excel) y retorna un json estructurado con el modelo de datos de la base de datos.",
+        "height": 352,
+        "width": 512
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "d682b903-034e-4a9d-b779-36e312a1c590",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        80,
+        128
+      ],
+      "id": "9d25e626-e74c-4904-91c4-ea15e9fe7b8e",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// FUNCIONES AUXILIARES\n// ============================================\n\nfunction parseDateDDMMYYYY(dateString) {\n    /**\n     * Parsear fechas en formato DD/MM/YYYY, DD/MM/YY, o número serial de Excel\n     * Retorna en formato YYYY-MM-DD para PostgreSQL\n     */\n    if (!dateString || dateString === '' || dateString === null) {\n        return null;\n    }\n    \n    try {\n        // Si es objeto Date, convertir directamente\n        if (dateString instanceof Date) {\n            const year = dateString.getFullYear();\n            const month = String(dateString.getMonth() + 1).padStart(2, '0');\n            const day = String(dateString.getDate()).padStart(2, '0');\n            return `${year}-${month}-${day}`;\n        }\n        \n        // Si es un número (formato serial de Excel)\n        if (typeof dateString === 'number') {\n            // Excel guarda las fechas como días desde 1900-01-01\n            // Pero Excel tiene un bug: cuenta 1900 como año bisiesto (no lo es)\n            // Por eso restamos 1 día si es >= 60 (después del 29 de feb de 1900)\n            const excelEpoch = new Date(1900, 0, 1);\n            const daysOffset = dateString > 59 ? dateString - 1 : dateString;\n            const date = new Date(excelEpoch.getTime() + (daysOffset - 1) * 24 * 60 * 60 * 1000);\n            \n            const year = date.getFullYear();\n            const month = String(date.getMonth() + 1).padStart(2, '0');\n            const day = String(date.getDate()).padStart(2, '0');\n            return `${year}-${month}-${day}`;\n        }\n        \n        // Convertir a string y limpiar\n        const dateStr = String(dateString).trim();\n        \n        // Si es un string numérico (serial de Excel como string)\n        if (/^\\d+$/.test(dateStr)) {\n            const serialNumber = parseInt(dateStr);\n            const excelEpoch = new Date(1900, 0, 1);\n            const daysOffset = serialNumber > 59 ? serialNumber - 1 : serialNumber;\n            const date = new Date(excelEpoch.getTime() + (daysOffset - 1) * 24 * 60 * 60 * 1000);\n            \n            const year = date.getFullYear();\n            const month = String(date.getMonth() + 1).padStart(2, '0');\n            const day = String(date.getDate()).padStart(2, '0');\n            return `${year}-${month}-${day}`;\n        }\n        \n        // Si viene en formato ISO (2025-02-06T03:00:00.000Z o 2025-02-06)\n        if (dateStr.includes('-') && !dateStr.includes('/')) {\n            const dt = new Date(dateStr);\n            if (!isNaN(dt.getTime())) {\n                const year = dt.getFullYear();\n                const month = String(dt.getMonth() + 1).padStart(2, '0');\n                const day = String(dt.getDate()).padStart(2, '0');\n                return `${year}-${month}-${day}`;\n            }\n        }\n        \n        // Si viene en formato DD/MM/YYYY o DD/MM/YY\n        if (dateStr.includes('/')) {\n            const parts = dateStr.split('/');\n            if (parts.length === 3) {\n                let day = parts[0].padStart(2, '0');\n                let month = parts[1].padStart(2, '0');\n                let year = parts[2];\n                \n                // Si el año es de 2 dígitos, convertir a 4\n                if (year.length === 2) {\n                    const yearNum = parseInt(year);\n                    // Si es mayor a 50, asumir 19XX, sino 20XX\n                    year = yearNum > 50 ? `19${year}` : `20${year}`;\n                }\n                \n                // Validar que sean números válidos\n                const dayNum = parseInt(day);\n                const monthNum = parseInt(month);\n                const yearNum = parseInt(year);\n                \n                if (dayNum >= 1 && dayNum <= 31 && monthNum >= 1 && monthNum <= 12 && yearNum >= 1900) {\n                    return `${year}-${month}-${day}`;\n                }\n            }\n        }\n        \n        return null;\n    } catch (e) {\n        console.log(`Error parseando fecha: ${dateString} - ${e.message}`);\n        return null;\n    }\n}\n\nfunction calcularDiasHastaControl(fechaControlStr, desdeFecha = null) {\n    /**\n     * Calcular días hasta el próximo control desde una fecha dada (o desde hoy)\n     */\n    if (!fechaControlStr) {\n        return null;\n    }\n    \n    try {\n        // Si viene en formato DD/MM/YYYY, convertir primero\n        let fechaISO = fechaControlStr;\n        if (typeof fechaControlStr === 'string' && fechaControlStr.includes('/')) {\n            fechaISO = parseDateDDMMYYYY(fechaControlStr);\n        } else if (typeof fechaControlStr === 'number') {\n            // Si es número serial de Excel\n            fechaISO = parseDateDDMMYYYY(fechaControlStr);\n        }\n        \n        const fechaControl = new Date(fechaISO);\n        const fechaDesde = desdeFecha ? new Date(desdeFecha) : new Date();\n        \n        // Resetear horas para comparar solo fechas\n        fechaControl.setHours(0, 0, 0, 0);\n        fechaDesde.setHours(0, 0, 0, 0);\n        \n        const diffTime = fechaControl - fechaDesde;\n        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));\n        \n        return diffDays;\n    } catch (e) {\n        return null;\n    }\n}\n\nfunction determinarEstadoControl(diasHastaControl) {\n    /**\n     * Determinar estado del control basado en días hasta el control\n     */\n    if (diasHastaControl === null || diasHastaControl === undefined) {\n        return 'pendiente';\n    }\n    \n    if (diasHastaControl < 0) {\n        return 'vencido';\n    } else if (diasHastaControl === 0) {\n        return 'realizado';\n    } else {\n        return 'pendiente';\n    }\n}\n\nfunction buscarSemaforoEnData(data) {\n    /**\n     * Buscar el color del semáforo en CUALQUIER valor del objeto data\n     * Retorna: 'verde', 'amarillo', 'rojo' o 'sin_clasificar'\n     */\n    const coloresValidos = ['verde', 'amarillo', 'rojo'];\n    \n    // Obtener todos los valores del objeto (sin importar las claves)\n    const valores = Object.values(data);\n    \n    // Buscar en cada valor\n    for (const valor of valores) {\n        // Si el valor existe y no es null/undefined/vacío\n        if (valor !== null && valor !== undefined && valor !== '') {\n            // Convertir a string y normalizar\n            const valorStr = String(valor).toLowerCase().trim();\n            \n            // Verificar si es alguno de los colores válidos\n            for (const color of coloresValidos) {\n                if (valorStr === color) {\n                    return color;\n                }\n            }\n        }\n    }\n    \n    // Si no se encontró ningún color\n    return 'sin_clasificar';\n}\n\nfunction buscarFaseEnData(data) {\n    /**\n     * Buscar la fase en CUALQUIER valor del objeto data\n     * Retorna: 'fase 1', 'fase 2', 'fase 3' o 'fase 1' (default)\n     */\n    const valores = Object.values(data);\n    \n    // Buscar en cada valor\n    for (const valor of valores) {\n        // Si el valor existe y no es null/undefined/vacío\n        if (valor !== null && valor !== undefined && valor !== '') {\n            // Convertir a string y normalizar\n            const valorStr = String(valor).toLowerCase().trim();\n            \n            // Buscar \"fase 3\" primero (para evitar que \"fase 3\" sea detectado como \"fase\" + \"3\")\n            if (valorStr.includes('fase 3') || valorStr === '3' || valorStr === 'fase3') {\n                return 'fase 3';\n            }\n            \n            // Buscar \"fase 2\"\n            if (valorStr.includes('fase 2') || valorStr === '2' || valorStr === 'fase2') {\n                return 'fase 2';\n            }\n            \n            // Buscar \"fase 1\"\n            if (valorStr.includes('fase 1') || valorStr === '1' || valorStr === 'fase1') {\n                return 'fase 1';\n            }\n        }\n    }\n    \n    // Si no se encontró ninguna fase, retornar fase 1 por defecto\n    return 'fase 1';\n}\n\nfunction limpiarTexto(texto) {\n    /**\n     * Limpiar y normalizar texto\n     */\n    if (!texto || texto === '') {\n        return null;\n    }\n    return String(texto).trim();\n}\n\nfunction escaparSQL(texto) {\n    /**\n     * Escapar comillas simples para SQL\n     */\n    if (!texto) {\n        return null;\n    }\n    return String(texto).replace(/'/g, \"''\");\n}\n\n// ============================================\n// PROCESAMIENTO PRINCIPAL\n// ============================================\n\n// Obtener todos los items del input\nconst items = $input.all();\nconst transformedData = [];\n\n// Fecha actual para los controles realizados (población inicial)\nconst hoy = new Date();\nconst fechaHoy = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;\n\nconsole.log(`📊 Iniciando procesamiento de ${items.length} registros...`);\nconsole.log(`📅 Fecha de ejecución: ${fechaHoy}`);\n\n// Procesar cada item\nfor (let idx = 0; idx < items.length; idx++) {\n    try {\n        const data = items[idx].json;\n        \n        // Extraer datos principales\n        const ciaNombre = limpiarTexto(data.CIA) || 'SIN_CIA';\n        const distritoNombre = limpiarTexto(data.DISTRITO) || 'SIN_DISTRITO';\n        const baseOfNombre = limpiarTexto(data['Base/Of']) || 'SIN_BASE';\n        \n        // Datos del paciente\n        const pacienteNombre = limpiarTexto(data['Apellido y Nombre']) || 'DESCONOCIDO';\n        const pacienteLegajo = data.Legajo || data['Legajo con ceros'] || 0;\n        const pacienteLegajoConCeros = data['Legajo con ceros'] || pacienteLegajo;\n        \n        // Fechas (ahora usando la función correcta)\n        const fechaInicio = parseDateDDMMYYYY(data['Fecha de Inicio']);\n        const fechaProximoControlRaw = data['Próximo Control'];\n        const fechaProximoControl = parseDateDDMMYYYY(fechaProximoControlRaw);\n        \n        // Diagnóstico\n        const diagnosticoNombre = limpiarTexto(data['Diagnóstico']) || 'Sin diagnóstico';\n        \n        // Tipo de evento\n        const tipoEvento = limpiarTexto(data['Tipo de Evento']) || 'ENFERMO';\n        \n        // Métricas de control\n        let diasHastaControl = data['DIAS HASTA CONTROL'];\n        if (diasHastaControl === null || diasHastaControl === undefined) {\n            if (fechaProximoControlRaw) {\n                diasHastaControl = calcularDiasHastaControl(fechaProximoControlRaw);\n            }\n        }\n        \n        // Semáforo: Buscar en todos los valores del data\n        const semaforoColor = buscarSemaforoEnData(data);\n        \n        // Fase: buscar en cualquier campo del data\n        const faseNombre = buscarFaseEnData(data);\n        \n        // Estado del control ACTUAL: para población inicial, todos son 'realizado'\n        const estadoControlActual = 'realizado';\n        \n        // PRÓXIMO CONTROL: calcular días y estado\n        const diasHastaProximoControl = fechaProximoControl ? calcularDiasHastaControl(fechaProximoControl) : null;\n        const estadoProximoControl = determinarEstadoControl(diasHastaProximoControl);\n        \n        // Observaciones (POBLACIÓN INICIAL: observacion y observacion_original son iguales)\n        const observacionesTexto = limpiarTexto(data.OBSERVACIONES);\n        \n        // Metadata adicional\n        const equipo = data.Equipo;\n        const operadora = limpiarTexto(data.Operadora);\n        const diasBaja = data['Días de BAJA'];\n        \n        // ============================================\n        // CONSTRUIR OBJETO TRANSFORMADO\n        // ============================================\n        \n        const transformed = {\n            // === DATOS DE CIA ===\n            cia: {\n                nombre: escaparSQL(ciaNombre)\n            },\n            \n            // === DATOS DE DISTRITO ===\n            distrito: {\n                nombre: escaparSQL(distritoNombre)\n            },\n            \n            // === DATOS DE BASE OF ===\n            base_of: {\n                nombre: escaparSQL(baseOfNombre)\n            },\n            \n            // === DATOS DEL PACIENTE ===\n            paciente: {\n                nombre_apellido: escaparSQL(pacienteNombre),\n                legajo: pacienteLegajo ? parseInt(pacienteLegajo) : 0,\n                legajo_con_ceros: pacienteLegajoConCeros ? parseInt(pacienteLegajoConCeros) : 0\n            },\n            \n            // === DATOS DEL DIAGNÓSTICO ===\n            diagnostico: {\n                nombre: escaparSQL(diagnosticoNombre)\n            },\n            \n            // === DATOS DEL CASO CLÍNICO ===\n            caso_clinico: {\n                fecha_inicio: fechaInicio,\n                tipo_evento: tipoEvento,\n                origen_csv_drive: 'HCTest Hoja 1.xlsx',\n                fase_nombre: faseNombre,\n                semaforo_color: semaforoColor\n            },\n            \n            // === DATOS DEL CONTROL ACTUAL ===\n            // Para población inicial: el control se considera ejecutado HOY\n            control: {\n                fecha_control: fechaHoy,  // Fecha actual (cuando se ejecutó)\n                fecha_ejecucion_control: fechaHoy,  // Fecha actual (cuando se ejecutó)\n                dias_hasta_control: diasHastaControl,\n                estado_control: estadoControlActual,  // 'realizado' para población inicial\n                semaforo_color: semaforoColor,\n                fase_nombre: faseNombre,\n                observacion: escaparSQL(observacionesTexto),  // Observación procesada\n                observacion_original: escaparSQL(observacionesTexto)  // Misma en población inicial\n            },\n            \n            // === PRÓXIMO CONTROL (del Excel) ===\n            // Este es el control futuro que debe crearse\n            proximo_control: {\n                fecha_control: fechaProximoControl,  // Fecha del Excel\n                fecha_ejecucion_control: null,  // Aún no se ejecutó\n                dias_hasta_control: diasHastaProximoControl,  // Días desde hoy\n                estado_control: estadoProximoControl,  // 'pendiente', 'vencido', etc\n                semaforo_color: null,  // Se determinará cuando se ejecute\n                fase_nombre: null,  // Se determinará cuando se ejecute\n                observacion: null,  // No hay observación aún\n                observacion_original: null  // No hay observación aún\n            },\n            \n            // === METADATA ADICIONAL ===\n            metadata: {\n                equipo: equipo,\n                operadora: escaparSQL(operadora),\n                dias_baja: diasBaja\n            },\n            \n            // === DATOS ORIGINALES (para debugging) ===\n            _raw: {\n                indice: idx,\n                procesado_en: new Date().toISOString(),\n                fecha_inicio_original: data['Fecha de Inicio'],\n                proximo_control_original: data['Próximo Control']\n            }\n        };\n        \n        transformedData.push(transformed);\n        \n    } catch (e) {\n        console.log(`❌ Error procesando item ${idx}: ${e.message}`);\n        console.log(`   Datos: ${JSON.stringify(items[idx].json, null, 2)}`);\n        continue;\n    }\n}\n\nconsole.log(`✅ Procesados ${transformedData.length} registros exitosamente`);\n\nreturn transformedData;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        288,
+        128
+      ],
+      "id": "b98990ed-c25a-41ea-ba18-0f573e97e73f",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {
+    "When Executed by Another Workflow": [
+      {
+        "json": {
+          "id": 64,
+          "CIA": "SAI",
+          "DISTRITO": "DO",
+          "Base/Of": "Neuquen",
+          "Fecha de Inicio": "2025-09-23T03:00:00.000Z",
+          "Tipo de Evento": "ACCIDENTADO",
+          "Equipo": "PLUS 03",
+          "Operadora": "PLUSPETROL",
+          "Legajo": 63,
+          "Legajo con ceros": 63,
+          "Apellido y Nombre": "A38",
+          "Próximo Control": "2025-10-06T03:00:00.000Z",
+          "DIAS HASTA CONTROL": 0,
+          "Días de BAJA": 8,
+          "Diagnóstico": "omalgia izq",
+          "OBSERVACIONES": "analgesia y FKT. Rx: SLO. RNM aguarda informe",
+          "__EMPTY": "fase 2",
+          "01-Oct": "verde"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "4b6c2426-da5d-4f14-8be3-b455fc88b377",
+  "meta": {
+    "instanceId": "5401c9f8e71c27ad222e069d21f03b4152784c83c549bb52ce6071eb671ff35b"
+  },
+  "id": "Wdle0C9WxLmPbZJ0",
+  "tags": [
+    {
+      "createdAt": "2025-11-02T19:28:27.755Z",
+      "updatedAt": "2025-11-02T19:28:27.755Z",
+      "id": "dfJBmQLA6ia8WlGh",
+      "name": "Ingegrales"
+    }
+  ]
+}

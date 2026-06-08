@@ -1,0 +1,327 @@
+{
+  "name": "Insertar Caso en Base de Datos",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        928,
+        448
+      ],
+      "id": "e07eb129-abb5-4360-9f92-c2ced42bc94c",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO cia (nombre)\nVALUES ('{{ $('When Executed by Another Workflow').item.json.cia.nombre }}')\nON CONFLICT (nombre) \nDO UPDATE SET nombre = EXCLUDED.nombre\nRETURNING id, nombre;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1104,
+        448
+      ],
+      "id": "bfd4ba13-f624-42a5-acac-b00f8018731f",
+      "name": "INCERT CIA"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH cia_data AS (\n  SELECT id FROM cia WHERE nombre = '{{ $('When Executed by Another Workflow').item.json.cia.nombre }}'\n)\nINSERT INTO distrito (nombre, cia_id)\nSELECT \n  '{{ $('When Executed by Another Workflow').item.json.distrito.nombre }}',\n  cia_data.id\nFROM cia_data\nON CONFLICT (nombre, cia_id) \nDO UPDATE SET nombre = EXCLUDED.nombre\nRETURNING id, nombre, cia_id;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1296,
+        448
+      ],
+      "id": "089b5534-5f2c-4b31-814e-d736a48f098f",
+      "name": "INSERT DISTRO"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH distrito_data AS (\n  SELECT d.id \n  FROM distrito d\n  JOIN cia c ON d.cia_id = c.id\n  WHERE d.nombre = '{{ $('When Executed by Another Workflow').item.json.distrito.nombre }}'\n    AND c.nombre = '{{ $('When Executed by Another Workflow').item.json.cia.nombre }}'\n)\nINSERT INTO base_of (nombre, distrito_id)\nSELECT \n  '{{ $('When Executed by Another Workflow').item.json.base_of.nombre }}',\n  distrito_data.id\nFROM distrito_data\nON CONFLICT (nombre) \nDO UPDATE SET nombre = EXCLUDED.nombre\nRETURNING id, nombre, distrito_id;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1472,
+        448
+      ],
+      "id": "05d1b0e4-6632-4180-a129-37fd3f96a286",
+      "name": "INSERT BASE OF"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH base_of_data AS (\n  SELECT bo.id \n  FROM base_of bo\n  JOIN distrito d ON bo.distrito_id = d.id\n  JOIN cia c ON d.cia_id = c.id\n  WHERE bo.nombre = '{{ $('When Executed by Another Workflow').item.json.base_of.nombre }}'\n    AND d.nombre = '{{ $('When Executed by Another Workflow').item.json.distrito.nombre }}'\n    AND c.nombre = '{{ $('When Executed by Another Workflow').item.json.cia.nombre }}'\n)\nINSERT INTO paciente (\n  nombre_apellido, \n  legajo, \n  legajo_con_ceros, \n  base_of_id\n)\nSELECT \n  '{{ $('When Executed by Another Workflow').item.json.paciente.nombre_apellido }}',\n  {{ $('When Executed by Another Workflow').item.json.paciente.legajo }},\n  {{ $('When Executed by Another Workflow').item.json.paciente.legajo_con_ceros }},\n  base_of_data.id\nFROM base_of_data\nON CONFLICT (legajo) \nDO UPDATE SET \n  nombre_apellido = EXCLUDED.nombre_apellido,\n  legajo_con_ceros = EXCLUDED.legajo_con_ceros,\n  base_of_id = EXCLUDED.base_of_id,\n  updated_at = CURRENT_TIMESTAMP\nRETURNING id, nombre_apellido, legajo;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1664,
+        448
+      ],
+      "id": "4f0ed24e-312d-4fa5-b68f-782ee11339f0",
+      "name": "INSERT PACIENTE"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO diagnostico (nombre)\nVALUES ('{{ $('When Executed by Another Workflow').item.json.diagnostico.nombre }}')\nON CONFLICT (nombre) \nDO UPDATE SET nombre = EXCLUDED.nombre\nRETURNING id, nombre;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1856,
+        448
+      ],
+      "id": "1da06c3b-b983-4505-9fe5-54ccb4903824",
+      "name": "INSERT DIAGNOSTICO"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH \n  paciente_data AS (\n    SELECT id FROM paciente WHERE legajo = {{ $('When Executed by Another Workflow').item.json.paciente.legajo }}\n  ),\n  diagnostico_data AS (\n    SELECT id FROM diagnostico WHERE nombre = '{{ $('When Executed by Another Workflow').item.json.diagnostico.nombre }}'\n  ),\n  semaforo_data AS (\n    SELECT id FROM semaforo WHERE color = '{{ $('When Executed by Another Workflow').item.json.caso_clinico.semaforo_color }}'\n  ),\n  fase_data AS (\n    SELECT id FROM fase WHERE nombre = '{{ $('When Executed by Another Workflow').item.json.caso_clinico.fase_nombre }}'\n  )\nINSERT INTO caso_clinico (\n  fecha_inicio,\n  tipo_evento,\n  paciente_id,\n  diagnostico_id,\n  origen_csv_drive,\n  semaforo_id,\n  fase_id\n)\nSELECT \n  '{{ $('When Executed by Another Workflow').item.json.caso_clinico.fecha_inicio }}'::DATE,\n  '{{ $('When Executed by Another Workflow').item.json.caso_clinico.tipo_evento }}',\n  paciente_data.id,\n  diagnostico_data.id,\n  '{{ $('When Executed by Another Workflow').item.json.caso_clinico.origen_csv_drive }}',\n  semaforo_data.id,\n  fase_data.id\nFROM paciente_data, diagnostico_data, semaforo_data, fase_data\nON CONFLICT (paciente_id, fecha_inicio) \nDO UPDATE SET \n  tipo_evento = EXCLUDED.tipo_evento,\n  diagnostico_id = EXCLUDED.diagnostico_id,\n  semaforo_id = EXCLUDED.semaforo_id,\n  fase_id = EXCLUDED.fase_id,\n  updated_at = CURRENT_TIMESTAMP\nRETURNING id, paciente_id, fecha_inicio;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2048,
+        448
+      ],
+      "id": "0f80539c-9782-451c-880f-bbb8bb4c2edc",
+      "name": "INSERT CASO CLINICO"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH \n  caso_clinico_data AS (\n    SELECT cc.id \n    FROM caso_clinico cc\n    JOIN paciente p ON cc.paciente_id = p.id\n    WHERE p.legajo = {{ $('When Executed by Another Workflow').item.json.paciente.legajo }}\n      AND cc.fecha_inicio = '{{ $('When Executed by Another Workflow').item.json.caso_clinico.fecha_inicio }}'::DATE\n  ),\n  semaforo_data AS (\n    SELECT id FROM semaforo WHERE color = '{{ $('When Executed by Another Workflow').item.json.control.semaforo_color }}'\n  ),\n  fase_data AS (\n    SELECT id FROM fase WHERE nombre = '{{ $('When Executed by Another Workflow').item.json.control.fase_nombre }}'\n  )\nINSERT INTO control_caso (\n  caso_clinico_id,\n  fecha_control,\n  fecha_ejecucion_control,\n  estado_control,\n  dias_hasta_control,\n  semaforo_id,\n  fase_id,\n  observacion,\n  observacion_original\n)\nSELECT \n  caso_clinico_data.id,\n  '{{ $('When Executed by Another Workflow').item.json.control.fecha_control }}'::DATE,\n  '{{ $('When Executed by Another Workflow').item.json.control.fecha_ejecucion_control }}'::DATE,\n  '{{ $('When Executed by Another Workflow').item.json.control.estado_control }}',\n  {{ $('When Executed by Another Workflow').item.json.control.dias_hasta_control }},\n  semaforo_data.id,\n  fase_data.id,\n  '{{ $('When Executed by Another Workflow').item.json.control.observacion }}',\n  '{{ $('When Executed by Another Workflow').item.json.control.observacion_original }}'\nFROM caso_clinico_data, semaforo_data, fase_data\nRETURNING id, caso_clinico_id, fecha_control, estado_control;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2256,
+        448
+      ],
+      "id": "4f9ac0c6-6570-49e6-beb0-36b70bfe344a",
+      "name": "INSERT CONTROL CASO"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH \n  caso_clinico_data AS (\n    SELECT cc.id \n    FROM caso_clinico cc\n    JOIN paciente p ON cc.paciente_id = p.id\n    WHERE p.legajo = {{ $('When Executed by Another Workflow').item.json.paciente.legajo }}\n      AND cc.fecha_inicio = '{{ $('When Executed by Another Workflow').item.json.caso_clinico.fecha_inicio }}'::DATE\n  )\nINSERT INTO control_caso (\n  caso_clinico_id,\n  fecha_control,\n  fecha_ejecucion_control,\n  estado_control,\n  dias_hasta_control,\n  semaforo_id,\n  fase_id,\n  observacion,\n  observacion_original\n)\nSELECT \n  caso_clinico_data.id,\n  '{{ $('When Executed by Another Workflow').item.json.proximo_control.fecha_control }}'::DATE,\n  NULL,  -- No se ha ejecutado aún\n  '{{ $('When Executed by Another Workflow').item.json.proximo_control.estado_control }}',\n  {{ $('When Executed by Another Workflow').item.json.proximo_control.dias_hasta_control }},\n  NULL,  -- Semáforo se determinará cuando se ejecute\n  NULL,  -- Fase se determinará cuando se ejecute\n  NULL,  -- Sin observación aún\n  NULL   -- Sin observación aún\nFROM caso_clinico_data\nWHERE '{{ $('When Executed by Another Workflow').item.json.proximo_control.fecha_control }}' IS NOT NULL\nRETURNING id, caso_clinico_id, fecha_control, estado_control;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2448,
+        448
+      ],
+      "id": "a81a578f-846d-42b7-bd33-c4e034fa6ebf",
+      "name": "INSERT PROXIMO CONTROL CASO"
+    },
+    {
+      "parameters": {
+        "content": "## Insertar en la Base de Datos un Caso \nSe recibe los datos, estruturados para insertar el caso en la base de datos. ",
+        "height": 384,
+        "width": 1760
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        864,
+        320
+      ],
+      "id": "9fd40e55-d9ad-4eca-8469-09309d2f3f3f",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Estructura de Tablas\n### Tablas de Organización\n\n- cia: Compañías aseguradoras\n- distrito: Distritos asociados a cada CIA\n- base_of: Bases u oficinas ubicadas en distritos\n\n### Tablas de Entidades Principales\n\n- paciente: Datos de pacientes (legajo, nombre, base asignada)\n- diagnostico: Catálogo de diagnósticos médicos\n- semaforo: Estados de clasificación (verde, amarillo, rojo, sin_clasificar)\n- fase: Fases del tratamiento (fase 1, fase 2, fase 3)\n\n### Tablas Centrales\n\n- caso_clinico: Caso médico de un paciente con diagnóstico, tipo de evento (ENFERMO/ACCIDENTADO), fechas y -estado actual\n- control_caso: Controles asociados a cada caso, con fechas, estados (pendiente/realizado/vencido), observaciones y clasificación\n\n### Tabla de Análisis\n\n- predicciones: Predicciones generadas por modelos de IA sobre casos específicos\n\n## Relaciones Principales\n\n- cia → distrito → base_of → paciente\n- paciente + diagnostico → caso_clinico\n- caso_clinico → control_caso (1 a muchos)\n- control_caso → predicciones (1 a muchos)\n- semaforo y fase se relacionan tanto con caso_clinico como con control_caso\n\n## Lógica de Carga de Casos\nAl cargar un nuevo caso:\n\n- Si NO hay observación: Se crea un único control con la fecha del próximo control programado (estado: pendiente/vencido según la fecha)\n- Si SÍ hay observación: Se crean DOS controles:\n\n    - Control realizado: Con la fecha actual, la observación existente y estado \"realizado\"\n    - Próximo control: Con la fecha del próximo control programado (estado: pendiente/vencido)\n\n\n\nEsto permite mantener el historial de controles ya realizados y programar los controles futuros.",
+        "height": 1088,
+        "width": 832,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "386e8881-e7bc-4a1c-bf56-0fb189a6a936",
+      "name": "Sticky Note1"
+    }
+  ],
+  "pinData": {
+    "When Executed by Another Workflow": [
+      {
+        "json": {
+          "cia": {
+            "nombre": "SAI"
+          },
+          "distrito": {
+            "nombre": "DO"
+          },
+          "base_of": {
+            "nombre": "Neuquen"
+          },
+          "paciente": {
+            "nombre_apellido": "A",
+            "legajo": 0,
+            "legajo_con_ceros": 0
+          },
+          "diagnostico": {
+            "nombre": "Esclerosis Lateral Amiotrófica confirmado"
+          },
+          "caso_clinico": {
+            "fecha_inicio": "2024-11-07",
+            "tipo_evento": "ENFERMO",
+            "origen_csv_drive": "HCTest Hoja 1.xlsx",
+            "fase_nombre": "fase 3",
+            "semaforo_color": "verde"
+          },
+          "control": {
+            "fecha_control": "2025-10-26",
+            "fecha_ejecucion_control": "2025-10-26",
+            "dias_hasta_control": -3,
+            "estado_control": "realizado",
+            "semaforo_color": "verde",
+            "fase_nombre": "fase 3",
+            "observacion": "espera resultado para diagnóstico definitivo. El 11/6 control en BA=le indican medicación para ELA. Tramitando certificado discapacidad, todos los papeles presentados. Controles en BA nuevos estudios. Junta médica SST 17/9. 15/9 le otorgan cert de discapacidad. Posible acuerdo de salida el 2 o 3/10 concurrirá a la bnase",
+            "observacion_original": "espera resultado para diagnóstico definitivo. El 11/6 control en BA=le indican medicación para ELA. Tramitando certificado discapacidad, todos los papeles presentados. Controles en BA nuevos estudios. Junta médica SST 17/9. 15/9 le otorgan cert de discapacidad. Posible acuerdo de salida el 2 o 3/10 concurrirá a la bnase"
+          },
+          "fecha_proximo_control_excel": "2025-10-03",
+          "metadata": {
+            "operadora": null,
+            "dias_baja": 328
+          },
+          "_raw": {
+            "indice": 0,
+            "procesado_en": "2025-10-26T16:32:01.873Z"
+          }
+        }
+      }
+    ]
+  },
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "INCERT CIA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "INCERT CIA": {
+      "main": [
+        [
+          {
+            "node": "INSERT DISTRO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "INSERT DISTRO": {
+      "main": [
+        [
+          {
+            "node": "INSERT BASE OF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "INSERT BASE OF": {
+      "main": [
+        [
+          {
+            "node": "INSERT PACIENTE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "INSERT PACIENTE": {
+      "main": [
+        [
+          {
+            "node": "INSERT DIAGNOSTICO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "INSERT DIAGNOSTICO": {
+      "main": [
+        [
+          {
+            "node": "INSERT CASO CLINICO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "INSERT CASO CLINICO": {
+      "main": [
+        [
+          {
+            "node": "INSERT CONTROL CASO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "INSERT CONTROL CASO": {
+      "main": [
+        [
+          {
+            "node": "INSERT PROXIMO CONTROL CASO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "dc3a4248-be23-4fbd-8ebf-56b50aebf1cd",
+  "meta": {
+    "instanceId": "5401c9f8e71c27ad222e069d21f03b4152784c83c549bb52ce6071eb671ff35b"
+  },
+  "id": "gxtdaLEz9f900rEd",
+  "tags": [
+    {
+      "createdAt": "2025-11-02T19:28:27.755Z",
+      "updatedAt": "2025-11-02T19:28:27.755Z",
+      "id": "dfJBmQLA6ia8WlGh",
+      "name": "Ingegrales"
+    }
+  ]
+}
